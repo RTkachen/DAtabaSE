@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "jezyk_napsiow")
+@Table(name = "jezyk_napisow")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -15,6 +15,7 @@ public class JezykNapisow {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "nazwa_jezyka", nullable = false, length = 50)
-    private String nazwaJezyka;
+    private Jezyk nazwaJezyka;
 }

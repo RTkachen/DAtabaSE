@@ -26,8 +26,8 @@ public class Seans {
     private Sala sala;
 
     @ManyToOne
-    @JoinColumn(name = "jezyk_napsiowid")
-    private JezykNapisow jezykNapsiow;
+    @JoinColumn(name = "jezyk_napisow_id")
+    private JezykNapisow jezykNapisow;
 
     @Column(name = "czas_rozpoczecia", nullable = false)
     private LocalDateTime czasRozpoczecia;

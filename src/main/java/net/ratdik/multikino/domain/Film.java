@@ -28,23 +28,21 @@ public class Film {
     @Column(name = "plakat", length = 255)
     private String plakat;
 
-    // mapowanie na TIME(6) – LocalTime w Javie
     @Column(name = "czas_trwania", nullable = false)
     private LocalTime czasTrwania;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "gatunek", length = 50)
-    private String gatunek;
+    private Gatunek gatunek;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "kraj_pochodzenia", length = 50)
-    private String krajPochodzenia;
+    private Kraj krajPochodzenia;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "jezyk_wyswietlania", length = 50, nullable = false)
-    private String jezykWyswietlania;
+    private Jezyk jezykWyswietlania;
 
-    /**
-     * Java‐owa reprezentacja DECIMAL(2,1) z bazy.
-     * Dzięki BigDecimal Hibernate poprawnie użyje body precision & scale.
-     */
     @Column(name = "ocena", precision = 2, scale = 1)
     private BigDecimal ocena;
 }

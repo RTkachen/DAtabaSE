@@ -1,30 +1,38 @@
 package net.ratdik.multikino.service;
 
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import net.ratdik.multikino.domain.Film;
 import net.ratdik.multikino.repository.FilmRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class FilmService {
-    private final FilmRepository filmRepo;
+    private final FilmRepository repo;
 
-    public FilmService(FilmRepository filmRepo) {
-        this.filmRepo = filmRepo;
+    @Autowired
+    public FilmService(FilmRepository repo) {
+        this.repo = repo;
     }
 
     public List<Film> findAll() {
-        return filmRepo.findAll();
+        return repo.findAll();
     }
 
     @Transactional
     public Film save(Film film) {
-        return filmRepo.save(film);
+        return repo.save(film);
     }
 
+    public Optional<Film> findById(Integer id) {
+        return repo.findById(id);
+    }
+
+    @Transactional
     public void deleteById(Integer id) {
-        filmRepo.deleteById(id);
+        repo.deleteById(id);
     }
 }

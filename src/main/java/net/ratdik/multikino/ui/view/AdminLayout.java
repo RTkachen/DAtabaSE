@@ -1,63 +1,93 @@
 package net.ratdik.multikino.ui.view;
 
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.applayout.AppLayout;
+import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Span;
-import com.vaadin.flow.component.orderedlayout.FlexComponent;
+import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
-import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.router.RouterLink;
+import com.vaadin.flow.component.sidenav.SideNav;
+import com.vaadin.flow.component.sidenav.SideNavItem;
+import com.vaadin.flow.router.BeforeEnterEvent;
+import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.server.VaadinSession;
+import com.vaadin.flow.theme.lumo.LumoUtility;
 import net.ratdik.multikino.domain.RoleName;
 import net.ratdik.multikino.domain.User;
-import net.ratdik.multikino.ui.view.*;
 
-public class AdminLayout extends AppLayout {
+public class AdminLayout extends AppLayout implements BeforeEnterObserver {
+
+    private SideNav nav;
 
     public AdminLayout() {
-        // 1) HEADER
         H1 logo = new H1("Cinema App");
-        logo.getStyle().set("margin", "0");
+        logo.addClickListener(e -> getUI().ifPresent(ui -> ui.navigate("")));
+        logo.addClassNames(LumoUtility.FontSize.LARGE, LumoUtility.Margin.NONE);
 
         HorizontalLayout header = new HorizontalLayout();
         header.setWidthFull();
-        header.setAlignItems(FlexComponent.Alignment.CENTER);
-        header.setJustifyContentMode(FlexComponent.JustifyContentMode.BETWEEN);
-        header.add(logo);
+        header.setPadding(true);
+        header.setAlignItems(Alignment.CENTER);
 
-        // 2) USER INFO + LOGOUT
-        User current = VaadinSession.getCurrent().getAttribute(User.class);
-        if (current != null) {
-            String name = current.getFirstName();
-            if (current.hasRole(RoleName.ROLE_MANAGER)) {
-                name += " (Kierownik)";
-            } else if (current.hasRole(RoleName.ROLE_CASHIER)) {
-                name += " (Kasjer)";
-            }
-            Span userSpan = new Span(name);
-            RouterLink logout = new RouterLink("Wyloguj", LoginView.class);
-            header.add(userSpan, logout);
-        } else {
-            RouterLink login = new RouterLink("Zaloguj", LoginView.class);
-            header.add(login);
+        Span spacer = new Span();
+        spacer.getStyle().set("flex-grow", "1");
+
+        header.add(logo, spacer);
+
+        User user = VaadinSession.getCurrent().getAttribute(User.class);
+        if (user != null) {
+            String name = user.getFirstName();
+            String suffix = user.hasRole(RoleName.ROLE_MANAGER) ? " (Manager)" :
+                    user.hasRole(RoleName.ROLE_CASHIER) ? " (Cashier)" : "";
+            Span userInfo = new Span(name + suffix);
+            userInfo.addClassNames(LumoUtility.FontSize.MEDIUM);
+
+            Button logout = new Button("Wyloguj", e -> {
+                VaadinSession.getCurrent().close();
+                UI.getCurrent().getPage().reload();
+            });
+            logout.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+
+            header.add(userInfo, logout);
         }
 
         addToNavbar(header);
 
-        // 3) DRAWER (MENU) – wyświetlamy tylko jeśli to Kierownik
-        if (current != null && current.hasRole(RoleName.ROLE_MANAGER)) {
-            RouterLink accountsLink     = new RouterLink("Konta", AccountsView.class);
-            RouterLink filmListLink     = new RouterLink("Filmy", FilmListView.class);
-            RouterLink addFilmLink      = new RouterLink("Dodaj film", AddFilmView.class);
-            RouterLink addSessionLink   = new RouterLink("Dodaj seans", AddSessionView.class);
+        // Inicjalizacja SideNav
+        nav = new SideNav();
+        nav.addItem(new SideNavItem("Użytkownicy", "admin-panel/users"));
+        nav.addItem(new SideNavItem("Filmy", "admin-panel/films"));
+        nav.addItem(new SideNavItem("Seanse", "admin-panel/seances"));
+        nav.addItem(new SideNavItem("Bilety", "/tickets"));
+        nav.setWidth("200px");
+    }
 
-            VerticalLayout menu = new VerticalLayout(
-                    accountsLink,
-                    filmListLink,
-                    addFilmLink,
-                    addSessionLink
-            );
-            addToDrawer(menu);
+    @Override
+    public void beforeEnter(BeforeEnterEvent event) {
+        String path = event.getLocation().getPath();
+        User user = VaadinSession.getCurrent().getAttribute(User.class);
+
+        // Sprawdzenie uprawnień – brak roli managera lub brak zalogowania
+        if (user == null || !user.hasRole(RoleName.ROLE_MANAGER)) {
+            event.rerouteTo(LoginView.class);
+            return; // Ważne, aby przerwać dalsze przetwarzanie
+        }
+
+        // Usuwamy menu boczne przed dodaniem nowego, aby uniknąć duplikatów
+        setDrawerOpened(false);
+        getElement().executeJs("this.shadowRoot.querySelector('vaadin-app-layout').shadowRoot.querySelector('#drawer').innerHTML = ''");
+
+        // Dodajemy menu boczne tylko na podstronach admina
+        if (path.startsWith("admin-panel")) {
+            addToDrawer(nav);
+            setDrawerOpened(true);
+        }
+
+        // Przekierowanie, jeśli użytkownik wejdzie na /admin-panel
+        if (path.equals("admin-panel")) {
+            event.rerouteTo("admin-panel/users");
         }
     }
 }

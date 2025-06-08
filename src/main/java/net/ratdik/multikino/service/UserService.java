@@ -13,7 +13,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class UserService implements UserDetailsService {
@@ -32,6 +35,8 @@ public class UserService implements UserDetailsService {
         if (userRepo.existsByEmail(dto.getEmail())) {
             throw new IllegalArgumentException("E-mail już użyty");
         }
+
+        // Tworzenie użytkownika z jawnie zainicjalizowanym roles
         User u = User.builder()
                 .email(dto.getEmail())
                 .firstName(dto.getFirstName())
@@ -39,14 +44,19 @@ public class UserService implements UserDetailsService {
                 .birthDate(dto.getBirthDate())
                 .password(encoder.encode(dto.getPassword()))
                 .blocked(false)
+                .roles(new HashSet<>()) // Jawna inicjalizacja roles
                 .build();
 
-        // pierwszy = manager
+        // Pierwszy użytkownik = manager
         if (userRepo.count() == 0) {
-            Role mgr = roleRepo.findByName(RoleName.ROLE_MANAGER).orElseThrow();
+            Role mgr = roleRepo.findByName(RoleName.ROLE_MANAGER)
+                    .orElseThrow(() -> new IllegalStateException("Rola ROLE_MANAGER nie istnieje"));
             u.getRoles().add(mgr);
         }
-        Role client = roleRepo.findByName(RoleName.ROLE_CLIENT).orElseThrow();
+
+        // Domyślna rola dla wszystkich użytkowników
+        Role client = roleRepo.findByName(RoleName.ROLE_CLIENT)
+                .orElseThrow(() -> new IllegalStateException("Rola ROLE_CLIENT nie istnieje"));
         u.getRoles().add(client);
 
         userRepo.save(u);
@@ -70,7 +80,7 @@ public class UserService implements UserDetailsService {
 
     @Transactional
     public void changePassword(Integer userId, ChangePasswordDto dto) {
-        User u = userRepo.findById(userId).orElseThrow();
+        User u = userRepo.findById(userId).orElseThrow(() -> new IllegalArgumentException("Użytkownik o ID " + userId + " nie istnieje"));
         if (!encoder.matches(dto.getOldPassword(), u.getPassword())) {
             throw new IllegalArgumentException("Stare hasło nie pasuje");
         }
@@ -83,24 +93,24 @@ public class UserService implements UserDetailsService {
 
     @Transactional
     public void blockUnblockUser(Integer userId, boolean block) {
-        User u = userRepo.findById(userId).orElseThrow();
+        User u = userRepo.findById(userId).orElseThrow(() -> new IllegalArgumentException("Użytkownik o ID " + userId + " nie istnieje"));
         u.setBlocked(block);
         userRepo.save(u);
     }
 
     @Transactional
     public void assignRole(Integer userId, RoleName roleName) {
-        User u = userRepo.findById(userId).orElseThrow();
-        Role r = roleRepo.findByName(roleName).orElseThrow();
+        User u = userRepo.findById(userId).orElseThrow(() -> new IllegalArgumentException("Użytkownik o ID " + userId + " nie istnieje"));
+        Role r = roleRepo.findByName(roleName).orElseThrow(() -> new IllegalStateException("Rola " + roleName + " nie istnieje"));
         u.getRoles().add(r);
         userRepo.save(u);
     }
 
     @Transactional
     public void removeRole(Integer userId, RoleName roleName) {
-        User u = userRepo.findById(userId).orElseThrow();
+        User u = userRepo.findById(userId).orElseThrow(() -> new IllegalArgumentException("Użytkownik o ID " + userId + " nie istnieje"));
         u.getRoles().removeIf(r -> r.getName() == roleName);
-        // upewnij się, że co najmniej jeden manager zostaje
+        // Upewnij się, że co najmniej jeden manager zostaje
         if (roleName == RoleName.ROLE_MANAGER &&
                 userRepo.findAll().stream()
                         .noneMatch(x -> x.hasRole(RoleName.ROLE_MANAGER))) {
@@ -115,11 +125,26 @@ public class UserService implements UserDetailsService {
         if (!encoder.matches(rawPassword, user.getPassword())) {
             throw new IllegalArgumentException("Nieprawidłowe hasło");
         }
+        if (user.isBlocked()) {
+            throw new IllegalArgumentException("Konto zablokowane");
+        }
         return user;
     }
 
-    /** <-- TA METODA DODAJE PANEL ADMINA **/
     public List<User> findAll() {
         return userRepo.findAll();
+    }
+
+    public Optional<User> findById(Integer id) {
+        return userRepo.findById(id);
+    }
+
+    public Optional<User> findByEmail(String email) {
+        return userRepo.findByEmail(email);
+    }
+
+    @Transactional
+    public void save(User user) {
+        userRepo.save(user);
     }
 }

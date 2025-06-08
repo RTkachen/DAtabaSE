@@ -1,11 +1,13 @@
 package net.ratdik.multikino.service;
 
+import net.ratdik.multikino.domain.Jezyk;
 import net.ratdik.multikino.domain.JezykNapisow;
 import net.ratdik.multikino.repository.JezykNapisowRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class JezykNapisowService {
@@ -20,11 +22,11 @@ public class JezykNapisowService {
     }
 
     @Transactional
-    public JezykNapisow save(JezykNapisow jezyk) {
-        return repo.save(jezyk);
+    public JezykNapisow save(JezykNapisow jezykNapisow) {
+        return repo.save(jezykNapisow);
     }
 
-    public void deleteById(Integer id) {
-        repo.deleteById(id);
+    public Optional<JezykNapisow> findByJezyk(Jezyk jezyk) {
+        return repo.findByNazwaJezyka(jezyk);
     }
 }
